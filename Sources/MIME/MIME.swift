@@ -436,6 +436,8 @@ public struct MIMEDecoder {
             currentLine += 1
         }
 
+        try validateHeaderLines(headerLines)
+
         let headers = parseHeaders(headerLines)
 
         // Check if headers are present
@@ -464,6 +466,35 @@ public struct MIMEDecoder {
             // Non-multipart message - body is the content
             return MIMEMessage(headers: headers, body: bodyContent)
         }
+    }
+
+    /// Validate that top-level header lines are well-formed `Name: value` fields.
+    ///
+    /// Merely containing a colon isn't enough to make a line a header — raw
+    /// content like JSON or JSONL contains colons too. Field names are
+    /// restricted to RFC 7230 token characters so input like
+    /// `{"name": "value"}` is rejected instead of parsing as a header.
+    private func validateHeaderLines(_ lines: [String]) throws {
+        for (index, line) in lines.enumerated() {
+            if line.first?.isWhitespace == true {
+                // A continuation line is only valid after a header line
+                if index == 0 { throw MIMEError.invalidHeader }
+                continue
+            }
+            guard let colonIndex = line.firstIndex(of: ":") else {
+                throw MIMEError.invalidHeader
+            }
+            let name = line[..<colonIndex]
+            guard !name.isEmpty, name.allSatisfy(isHeaderFieldNameCharacter) else {
+                throw MIMEError.invalidHeader
+            }
+        }
+    }
+
+    /// RFC 7230 token characters: alphanumerics plus `!#$%&'*+-.^_`|~`
+    private func isHeaderFieldNameCharacter(_ character: Character) -> Bool {
+        if character.isASCII && (character.isLetter || character.isNumber) { return true }
+        return "!#$%&'*+-.^_`|~".contains(character)
     }
 
     /// Returns true if the Content-Type header value declares a `multipart/*` type.
@@ -751,6 +782,8 @@ public enum MIMEError: Error, CustomStringConvertible {
     case invalidUTF8
     /// The MIME message has no headers
     case noHeaders
+    /// A line in the header block is not a valid header field
+    case invalidHeader
 
     public var description: String {
         switch self {
@@ -764,6 +797,8 @@ public enum MIMEError: Error, CustomStringConvertible {
             return "Data cannot be decoded as UTF-8"
         case .noHeaders:
             return "MIME message has no headers"
+        case .invalidHeader:
+            return "Invalid MIME header"
         }
     }
 }

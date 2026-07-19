@@ -69,6 +69,19 @@ func decodingApplicationJSON() async throws {
     #expect(message.body.contains("\"active\": true"))
 }
 
+@Test("Decoding raw JSONL")
+func decodingRawJSONL() async throws {
+    let mimeContent = """
+        {"name": "John Doe", "email": "john@example.com", "active": true}
+        {"name": "John Doe", "email": "john@example.com", "active": true}
+        {"name": "John Doe", "email": "john@example.com", "active": true}
+        """
+
+    #expect(throws: (any Error).self) {
+        try MIMEDecoder().decode(mimeContent)
+    }
+}
+
 @Test("Decoding missing content-type")
 func decodingMissingContentType() async throws {
     let mimeContent = """
