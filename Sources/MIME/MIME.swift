@@ -664,8 +664,10 @@ public struct MIMEEncoder {
     public init() {}
 
     public func encode(_ message: MIMEMessage) -> Data {
+        // Without headers there's no envelope to encode — the message is just
+        // its body contents.
         guard !message.headers.storage.isEmpty else {
-            return Data()
+            return message.body.data(using: .utf8) ?? Data()
         }
 
         var message = message

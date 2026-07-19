@@ -298,6 +298,21 @@ func encodingPart() async throws {
     #expect(encodedString.contains("Test content"))
 }
 
+@Test("Encoding raw JSONL")
+func encodingRawJSONL() async throws {
+    let mimeContent = """
+        {"name": "John Doe", "email": "john@example.com", "active": true}
+        {"name": "John Doe", "email": "john@example.com", "active": true}
+        {"name": "John Doe", "email": "john@example.com", "active": true}
+        """
+
+    let message = MIMEMessage(headers: [:], body: mimeContent)
+    let encoded = MIMEEncoder().encode(message)
+    let encodedString = String(data: encoded, encoding: .utf8) ?? ""
+
+    #expect(encodedString == mimeContent)
+}
+
 // MARK: Parts
 
 @Test("Part body editing")
